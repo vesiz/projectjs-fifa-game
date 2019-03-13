@@ -1,0 +1,42 @@
+#nav-wrapper{
+    margin-bottom: 20px;
+}
+
+.team-info{
+    box-sizing: border-box;
+	height: 100px;
+    width: 200px;
+    border: 1.5px black solid;
+    position: relative;
+    float: left;
+    padding: 10px;
+}
+
+h4, p{
+    margin: 0px;
+    margin-bottom: 3px;
+}
+
+.group-info{
+    box-sizing: border-box;
+    height: 200px;
+    width: 300px;
+    border: 1.5px black solid;
+    position: relative;
+    float: left;
+    padding: 10px;
+}
+
+.match-info{
+    box-sizing: border-box;
+    height: 80px;
+    width: 450px;
+    border: 1.5px black solid;
+    position: relative;
+    float: left;
+    padding: 10px;
+}
+
+.match-info > p {
+    text-align: center;
+}
