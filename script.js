@@ -2,9 +2,13 @@ var actionGetTeams   = DOMlib.get("teams-button");
 var actionGetGroups  = DOMlib.get("groups-button");
 var actionGetMatches = DOMlib.get("matches-button");
 var actionSearch     = DOMlib.get("search-button");
+var actionGetHistory = DOMlib.get("history-button");
 
 var getTeams = function(){
     Ajax.get("http://worldcup.sfg.io/teams", (data) => { 
+
+        LocalStorage.addHistoryItem("View Teams", 1);
+
         var teams = data;
         DOMlib.changeInnerHTML("info-wrapper", "");
 
@@ -30,6 +34,9 @@ var getTeams = function(){
 
 var getGroups = function(){
     Ajax.get("http://worldcup.sfg.io/teams/group_results", (data) => {
+
+        LocalStorage.addHistoryItem("View Groups", 2);
+
         var groups = data;
         DOMlib.changeInnerHTML("info-wrapper", "");
 
@@ -50,6 +57,10 @@ var getGroups = function(){
 };
 
 var getMatches = function(_url){
+
+    if(_url == "http://worldcup.sfg.io/matches"){
+        LocalStorage.addHistoryItem("View All Matches", 3);
+    }
 
     Ajax.get(_url, (data) => {
 
@@ -119,36 +130,43 @@ var generateSearchFields = function(_url){
     parent.appendChild(addOnElement);
 };
 
-var getSearchResult = function(_date, _month, _venue, _url){
-    var matches = _url;
+var getSearchResult = function(_date, _month, _venue){
 
-    if((_date > 31 || _date < 1) || (_month < 1 || _month > 12)){
-        alert("Incorrect data input.");
-        location.reload();
-        return;
-    }
+    Ajax.get("http://worldcup.sfg.io/matches", (data) => {
 
-    DOMlib.changeInnerHTML("info-wrapper", "");
-
-    for(var i = 0; i < matches.length; i++){
-
-        var matchDate = ((matches[i].datetime).split("T", 1))[0].split("-");
-
-        if(_date == parseInt(matchDate[2]) && _month == parseInt(matchDate[1]) && _venue == matches[i].venue){
-            
-            var addOnElement = `<p>The weather report for date ${((matches[i].datetime).split("T", 1))[0]} is:</p>`;
-            DOMlib.get("info-wrapper").innerHTML += addOnElement;
-            addOnElement = `<p>Sunny / Humidity: ${matches[i].weather.humidity}% / Temperature: ${matches[i].weather.temp_celsius}°C, ${matches[i].weather.temp_farenheit}°F / Wind Speed: ${matches[i].weather.wind_speed}km/h </p>`;
-            DOMlib.get("info-wrapper").innerHTML += addOnElement;
-            addOnElement = `<p>On this day the teams of ${matches[i].home_team_country} and ${matches[i].away_team_country} played against each other.</p>`;
-            DOMlib.get("info-wrapper").innerHTML += addOnElement;
-
+        
+        var matches = data;
+        
+        if((_date > 31 || _date < 1) || (_month < 1 || _month > 12)){
+            alert("Incorrect data input.");
+            location.reload();
+            return;
         }
-    } 
-
-    if(DOMlib.get("info-wrapper").innerHTML == ""){
-        DOMlib.changeInnerHTML("info-wrapper", "There is no weather report for this date, because there was not a game that day on the venue.");
-    }
+        
+        LocalStorage.addHistoryItem(`View weather info for 2018-${_month}-${_date} in ${_venue}`, 6);
+        
+        DOMlib.changeInnerHTML("info-wrapper", "");
+        
+        for(var i = 0; i < matches.length; i++){
+            
+            var matchDate = ((matches[i].datetime).split("T", 1))[0].split("-");
+            
+            if(_date == parseInt(matchDate[2]) && _month == parseInt(matchDate[1]) && _venue == matches[i].venue){
+                
+                var addOnElement = `<p>The weather report for date ${((matches[i].datetime).split("T", 1))[0]} in ${matches[i].venue} is:</p>`;
+                DOMlib.get("info-wrapper").innerHTML += addOnElement;
+                addOnElement = `<p>Sunny / Humidity: ${matches[i].weather.humidity}% / Temperature: ${matches[i].weather.temp_celsius}°C, ${matches[i].weather.temp_farenheit}°F / Wind Speed: ${matches[i].weather.wind_speed}km/h </p>`;
+                DOMlib.get("info-wrapper").innerHTML += addOnElement;
+                addOnElement = `<p>On this day the teams of ${matches[i].home_team_country} and ${matches[i].away_team_country} played against each other.</p>`;
+                DOMlib.get("info-wrapper").innerHTML += addOnElement;
+                
+            }
+        } 
+        
+        if(DOMlib.get("info-wrapper").innerHTML == ""){
+            DOMlib.changeInnerHTML("info-wrapper", "There is no weather report for this date, because there was not a game that day on the venue.");
+        }
+    });
 };
 
 var search = function(){
@@ -162,13 +180,64 @@ var search = function(){
             var selectedMonth = (document.getElementsByTagName("input"))[1].value;
             var selectedVenue = ((document.getElementsByTagName("select"))[0]).options[((document.getElementsByTagName("select"))[0]).selectedIndex].text;
             
-            getSearchResult(selectedDate, selectedMonth, selectedVenue, data);
+            getSearchResult(selectedDate, selectedMonth, selectedVenue);
         });
     });    
 };
 
 var getMatchesByCountry = function(_countryId){
     getMatches(`http://worldcup.sfg.io/matches/country?fifa_code=${_countryId}`);
+    LocalStorage.addHistoryItem(`View matches of ${_countryId}`, 4);
+};
+
+var showHistory = function(){
+    DOMlib.get("info-wrapper").innerHTML = "<h4>History of activities and searches:</h4>";
+    LocalStorage.addHistoryItem("View History", 5);
+    var history = LocalStorage.returnFullHistory();
+    
+    for(var i = 0; i < history.length; i++){
+
+        var type = (history[i].split("|"))[1];
+        var infoString = (history[i].split("|"))[0];
+
+        var addOnElement = document.createElement("p");
+        addOnElement.innerHTML = `${infoString}`;
+        addOnElement.setAttribute("style", "cursor: pointer;");
+        
+        switch(parseInt(type)) {
+            case 1: addOnElement.setAttribute("onclick", "getTeams()");
+            break;
+            case 2: addOnElement.setAttribute("onclick", "getGroups()");
+            break;
+            case 3: addOnElement.setAttribute("onclick","getMatches(\"http://worldcup.sfg.io/matches\")");
+            break;
+            case 4: var countryId = (infoString.split(" "))[(infoString.split(" ")).length - 1]; 
+                    addOnElement.addEventListener("click", (e) =>{
+                        getMatchesByCountry(countryId);
+                    });
+            break;
+            case 5: addOnElement.setAttribute("onclick", "showHistory()");
+            break;
+            case 6: var venue = (infoString.split(" "))[(infoString.split(" ")).length - 1] ;
+                    var date = ((infoString.split(" "))[9]).split("-");
+                    addOnElement.addEventListener("click", (e) => {
+                        getSearchResult(parseInt(date[2]), parseInt(date[1]),venue);
+                    });
+            break;
+
+        }
+
+        DOMlib.get("info-wrapper").appendChild(addOnElement);
+    }
+
+    var deleteButton = document.createElement("button");
+    deleteButton.innerHTML = "Delete History";
+    DOMlib.get("info-wrapper").appendChild(deleteButton);
+
+    deleteButton.addEventListener("click", (e) => {
+        LocalStorage.deleteHistory();
+        showHistory();
+    });
 };
 
 actionGetTeams.addEventListener("click", (e) => {
@@ -191,4 +260,7 @@ actionSearch.addEventListener("click", (e) => {
     search();
 });
 
-
+actionGetHistory.addEventListener("click", (e) => {
+    e.preventDefault();
+    showHistory();
+});
